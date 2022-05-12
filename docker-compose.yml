@@ -1,6 +1,23 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:14.2-alpine
+    restart: always
+    volumes:
+      - postgres_vol:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=postgres_db_name
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
   backend:
     build: .
     container_name: fastapi-backend
@@ -23,23 +40,6 @@ services:
     depends_on:
       - db
       - redis
-  db:
-    image: postgres:14.2-alpine
-    restart: always
-    volumes:
-      - postgres_vol:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=pass
-      - POSTGRES_DB=postgres_db_name
-  redis:
-    image: redis:7-alpine
-    restart: always
-    ports:
-      - '6379:6379'
-    command: redis-server --save 20 1 --loglevel warning
 
 volumes:
   postgres_vol:
