@@ -8,7 +8,21 @@ from app.models.user_model import User
 
 
 class Ticket(BaseModel):
-    user: User
     pet: int = 0
     luggage: int = 0
     price: int
+
+class TicketUser(Ticket):
+    user: User
+
+
+class BuyTicket(BaseModel):
+    pet: int = 0
+    luggage: int = 0
+    first_name: str
+    middle_name: str | None = None
+    last_name: str
+    gender: GenderEnum
+    document_type: DocumentsEnum
+    document_number: str
+    date_birth: date

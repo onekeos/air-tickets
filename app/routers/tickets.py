@@ -12,7 +12,7 @@ from app.db.database import get_db
 from app.db.models import UserDB, TicketDB
 from app.enums.airports_enum import AirportsEnum
 from app.models.rate_model import Rate
-from app.models.ticket_model import Ticket
+from app.models.ticket_model import Ticket, BuyTicket, TicketUser
 from app.models.user_model import User
 from app.utils import get_age_category, compare_departure_arrival
 
@@ -32,7 +32,7 @@ async def get_tickets(dep: AirportsEnum = Path(..., description='departure airpo
 
 @tickets_router.post('{dep}/{arr}/{flight_time}', status_code=201)
 async def buy_tickets(
-        tickets: list[Ticket],
+        tickets: list[BuyTicket],
         flight_time: str = Path(..., description='flight time'),
         dep: AirportsEnum = Path(..., description='departure airport'),
         arr: AirportsEnum = Path(..., description='arrival airport'),
@@ -81,7 +81,7 @@ async def buy_tickets(
 
             # in case when user already buy a ticket for this flight
             if e.orig.pgcode == '23505':
-                raise HTTPException(status_code=400, detail='Some of users already bought tickets')
+                raise HTTPException(status_code=400, detail='User/users already bought tickets')
             raise HTTPException(status_code=500)
     else:
         # decrease total count of tickets
@@ -90,7 +90,7 @@ async def buy_tickets(
     return Response(status_code=201)
 
 
-@tickets_router.get('{dep}/{arr}/{flight_time}', response_model=list[Ticket])
+@tickets_router.get('{dep}/{arr}/{flight_time}', response_model=list[TicketUser])
 async def get_bought_tickets_info(dep: AirportsEnum = Path(..., description='departure airport'),
                                   arr: AirportsEnum = Path(..., description='arrival airport'),
                                   flight_time: str = Path(..., description='flight time'),
@@ -106,7 +106,7 @@ async def get_bought_tickets_info(dep: AirportsEnum = Path(..., description='dep
     result = []
     for i in data:
         user = User.from_orm(i[1])
-        ticket = Ticket(id=i[0].id, flight_time=i[0].flight_time, flight_name=i[0].flight_name, pet=i[0].pet,
+        ticket = TicketUser(id=i[0].id, flight_time=i[0].flight_time, flight_name=i[0].flight_name, pet=i[0].pet,
                         luggage=i[0].luggage, price=i[0].price, user=user)
         result.append(ticket)
     return result

@@ -31,6 +31,6 @@ async def get_db() -> AsyncGenerator:
 
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text("""CREATE SCHEMA IF NOT EXISTS ticket;"""))
+        await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()

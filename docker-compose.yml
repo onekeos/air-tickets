@@ -13,7 +13,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=postgres_db_name
-      - POSTGRES_PORT=5433
+      - POSTGRES_PORT=5432
     restart: on-failure
     volumes:
       - .:/code
