@@ -1,6 +1,6 @@
 import os
 import aioredis
-
+import asyncio
 from fastapi import FastAPI
 
 from app.db.database import init_db
@@ -19,6 +19,7 @@ async def startup():
     # todo replace with background check
     await app.state.redis_repo.load_data()
     # todo replace with alembic
+    await asyncio.sleep(1)
     await init_db()
 
 
