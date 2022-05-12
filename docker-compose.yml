@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  backend:
+    build: .
+    container_name: fastapi-backend
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASS=pass
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=postgres_db_name
+      - POSTGRES_PORT=5433
+    restart: on-failure
+    volumes:
+      - .:/code
+    ports:
+      - "5000:5000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+    depends_on:
+      - db
+      - redis
+  db:
+    image: postgres:14.2-alpine
+    restart: always
+    volumes:
+      - postgres_vol:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=postgres_db_name
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+
+volumes:
+  postgres_vol:
+    driver: local
