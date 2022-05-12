@@ -32,6 +32,7 @@ services:
       - POSTGRES_DB=postgres_db_name
       - POSTGRES_PORT=5433
       - POSTGRES_HOST=db
+
     restart: on-failure
     volumes:
       - .:/code
@@ -39,5 +40,5 @@ services:
       - "5000:5000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
     depends_on:
-      - db
-      - redis
+      - 'db'
+      - 'redis'
