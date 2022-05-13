@@ -1,6 +1,6 @@
 import json
 import uuid
-
+from datetime import datetime
 from fastapi import APIRouter, Depends, Path
 from fastapi.exceptions import HTTPException
 from sqlalchemy import and_, select, exc
@@ -11,7 +11,7 @@ from app import main
 from app.db.database import get_db
 from app.db.models import UserDB, TicketDB
 from app.enums.airports_enum import AirportsEnum
-from app.models.rate_model import Rate
+from app.models.rate_model import Rate, FlightRate
 from app.models.ticket_model import Ticket, BuyTicket, TicketUser
 from app.models.user_model import User
 from app.utils import get_age_category, compare_departure_arrival
@@ -19,20 +19,29 @@ from app.utils import get_age_category, compare_departure_arrival
 tickets_router = APIRouter(prefix='/tickets')
 
 
-@tickets_router.get('{dep}/{arr}', response_model=list[Rate])
+@tickets_router.get('/{dep}/{arr}', response_model=list[FlightRate])
 async def get_tickets(dep: AirportsEnum = Path(..., description='departure airport'),
                       arr: AirportsEnum = Path(..., description='arrival airport')):
     """Get info about flights"""
 
     await compare_departure_arrival(dep, arr)
-    data = await main.app.state.redis_repo.get_all_by_key(f'{dep}-{arr}')
+    hashes = (await main.app.state.redis_repo.get_hashes_by_mask(f'{dep}-{arr}*'))[1]
+    print(hashes)
+    rates = []
+    for hash in hashes:
+        data = await main.app.state.redis_repo.get_all_by_key(hash)
+        rates.append(FlightRate(flight_date=hash.split(',')[1],
+                                rates=[Rate(time=k, **json.loads(v)) for k, v in data.items()]))
 
-    return [Rate(time=k, **json.loads(v)) for k, v in data.items()]
+    #     rates.append()
+    print(rates)
+    return rates
 
 
-@tickets_router.post('{dep}/{arr}/{flight_time}', status_code=201)
+@tickets_router.post('/{dep}/{arr}/{flight_date}-{flight_time}', status_code=201)
 async def buy_tickets(
         tickets: list[BuyTicket],
+        flight_date: str = Path(..., description='flight date'),
         flight_time: str = Path(..., description='flight time'),
         dep: AirportsEnum = Path(..., description='departure airport'),
         arr: AirportsEnum = Path(..., description='arrival airport'),
@@ -42,7 +51,7 @@ async def buy_tickets(
     await compare_departure_arrival(dep, arr)
 
     flight_name: str = f'{dep}-{arr}'
-    flight_data: str = await main.app.state.redis_repo.get_by_key(flight_name, flight_time)
+    flight_data: str = await main.app.state.redis_repo.get_by_key(f'{flight_name},{flight_date}', flight_time)
 
     if not flight_data:
         raise HTTPException(400, detail="Flight not found")
@@ -66,7 +75,7 @@ async def buy_tickets(
             db_sesion.add(user)
 
         ticket: TicketDB = TicketDB(**dict(id=uuid.uuid4(),
-                                           flight_time=flight_time,
+                                           flight_date_time=f'{flight_date} {flight_time}',
                                            pet=ticket.pet,
                                            luggage=ticket.luggage,
                                            price=flight_data[(await get_age_category(ticket.date_birth))] + flight_data[
@@ -90,9 +99,10 @@ async def buy_tickets(
     return Response(status_code=201)
 
 
-@tickets_router.get('{dep}/{arr}/{flight_time}', response_model=list[TicketUser])
+@tickets_router.get('/{dep}/{arr}/{flight_date}-{flight_time}', response_model=list[TicketUser])
 async def get_bought_tickets_info(dep: AirportsEnum = Path(..., description='departure airport'),
                                   arr: AirportsEnum = Path(..., description='arrival airport'),
+                                  flight_date: str = Path(..., description='flight date'),
                                   flight_time: str = Path(..., description='flight time'),
                                   db_session: AsyncSession = Depends(get_db)):
     """Get information about bought tickets"""
@@ -101,12 +111,12 @@ async def get_bought_tickets_info(dep: AirportsEnum = Path(..., description='dep
 
     data = (await db_session.execute(select([TicketDB, UserDB])
                                      .join(UserDB, TicketDB.user_id == UserDB.id)
-                                     .filter(and_(TicketDB.flight_time == flight_time,
+                                     .filter(and_(TicketDB.flight_date_time == f'{flight_date} {flight_time}',
                                                   TicketDB.flight_name == f'{dep}-{arr}'))))
     result = []
     for i in data:
         user = User.from_orm(i[1])
-        ticket = TicketUser(id=i[0].id, flight_time=i[0].flight_time, flight_name=i[0].flight_name, pet=i[0].pet,
+        ticket = TicketUser(id=i[0].id, flight_date_time=i[0].flight_date_time, flight_name=i[0].flight_name, pet=i[0].pet,
                         luggage=i[0].luggage, price=i[0].price, user=user)
         result.append(ticket)
     return result

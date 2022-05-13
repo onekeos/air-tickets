@@ -11,6 +11,7 @@ class Ticket(BaseModel):
     pet: int = 0
     luggage: int = 0
     price: int
+    flight_date_time: str
 
 class TicketUser(Ticket):
     user: User
