@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel, Field
 
 
@@ -9,3 +11,7 @@ class Rate(BaseModel):
     luggage: int = Field(..., example='400', description='Price for additional luggage')
     pet: int = Field(..., example='400', description='Price for pet transfer')
     total: int = Field(..., example='400', description='Total tickets for flight')
+
+class FlightRate(BaseModel):
+    flight_date: str
+    rates: List[Rate]

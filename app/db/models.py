@@ -25,10 +25,10 @@ class UserDB(Base):
 
 class TicketDB(Base):
     __tablename__ = 'tickets'
-    __table_args__ = (UniqueConstraint('user_id', 'flight_time', 'flight_name'), {'schema': 'ticket'})
+    __table_args__ = (UniqueConstraint('user_id', 'flight_date_time', 'flight_name'), {'schema': 'ticket'})
 
     id = Column(UUID(as_uuid=True), primary_key=True, index=True)
-    flight_time = Column(String)
+    flight_date_time = Column(String)
     flight_name = Column(String)
     pet = Column(Integer, nullable=True)
     luggage = Column(Integer, nullable=True)
